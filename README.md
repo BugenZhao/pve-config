@@ -29,7 +29,7 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
     - `kvm.ignore_msrs=1`
 
-      May be useful for Windows guests? (v1804-v19xx)
+      May be useful for Nvidia card on Windows guests? (v1804-v19xx)
 
     - `nomodeset nofb video=xxx:off`
 
@@ -38,7 +38,7 @@ This repository records some of the processes I used to configure Proxmox VE, pa
   - Minimal:
 
     ```bash
-    GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream kvm.ignore_msrs=1"
+    GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream"
     ```
 
   - With SR-IOV and safer graphics:
@@ -73,7 +73,7 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
   ```bash
   options vfio_iommu_type1 allow_unsafe_interrupts=1
-  options vfio-pci ids=1002:731f,1002:ab38
+  options vfio-pci ids=1002:731f,1002:ab38 disable_vga=1
   ```
 
   Note: there's no need to append the id if just to passthrough a device like USB controller and NVMe.

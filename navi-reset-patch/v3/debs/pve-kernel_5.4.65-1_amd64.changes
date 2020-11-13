@@ -1,0 +1,40 @@
+Format: 1.8
+Date: Mon, 21 Sep 2020 15:40:22 +0200
+Source: pve-kernel
+Binary: linux-tools-5.4 linux-tools-5.4-dbgsym pve-headers-5.4.65-1-pve pve-kernel-5.4.65-1-pve pve-kernel-libc-dev
+Architecture: amd64
+Version: 5.4.65-1
+Distribution: pve pmg
+Urgency: medium
+Maintainer: Proxmox Support Team <support@proxmox.com>
+Changed-By: Proxmox Support Team <support@proxmox.com>
+Description:
+ linux-tools-5.4 - Linux kernel version specific tools for version 5.4
+ pve-headers-5.4.65-1-pve - The Proxmox PVE Kernel Headers
+ pve-kernel-5.4.65-1-pve - The Proxmox PVE Kernel Image
+ pve-kernel-libc-dev - Linux support headers for userspace development
+Changes:
+ pve-kernel (5.4.65-1) pve pmg; urgency=medium
+ .
+   * update sources to Ubuntu-5.4.0-49.53
+Checksums-Sha1:
+ da0c1c516b9c9ef23967ff19b741bbc118676dbe 5118988 linux-tools-5.4-dbgsym_5.4.65-1_amd64.deb
+ 8ad8620963927b017b9e6c42c38e4e46bb0eeaaf 1352964 linux-tools-5.4_5.4.65-1_amd64.deb
+ 61614b6fb13a20f1972ee7a6d64cf5fe3c1bb419 9951568 pve-headers-5.4.65-1-pve_5.4.65-1_amd64.deb
+ 9f71fc1c4dbd5e0e9f0a8e291ac4f304f5ab1017 60338272 pve-kernel-5.4.65-1-pve_5.4.65-1_amd64.deb
+ 27b256112fd8ec52cca1e546594d152ad4048359 984628 pve-kernel-libc-dev_5.4.65-1_amd64.deb
+ 3df1c598f4c5921024bec95b7113ed91c0ff138e 11110 pve-kernel_5.4.65-1_amd64.buildinfo
+Checksums-Sha256:
+ 819025df1ed435376dfb4cb75f75d1bfc95f40106dd1d5910125c7d417df998f 5118988 linux-tools-5.4-dbgsym_5.4.65-1_amd64.deb
+ 4862e475d1adf9ff1f33c2c867e98a732f05214f00c306919b989b3404038e61 1352964 linux-tools-5.4_5.4.65-1_amd64.deb
+ d7b8137402a8738de37e20e38ea203711fa311f9f53b78b1636e84ec4da66d35 9951568 pve-headers-5.4.65-1-pve_5.4.65-1_amd64.deb
+ fe9fc7fcf660c0369b084e8e43d16667504bf99a1feddbef5cdfc6f13506f127 60338272 pve-kernel-5.4.65-1-pve_5.4.65-1_amd64.deb
+ b7ae4b5cf32cc1f2ed90eebb1fdaa4e4f0f1d8adf99c65fe3de925a04a2aba4d 984628 pve-kernel-libc-dev_5.4.65-1_amd64.deb
+ 65bdf79f194e7d560bc4e582ad5f91f776d82c3e3c55f89de375be99af725c46 11110 pve-kernel_5.4.65-1_amd64.buildinfo
+Files:
+ 84abab14254c392e2ac6909e3354d099 5118988 debug optional linux-tools-5.4-dbgsym_5.4.65-1_amd64.deb
+ eadad609f249980d949669c96ad1c9d9 1352964 devel optional linux-tools-5.4_5.4.65-1_amd64.deb
+ 61202f5d44411046445c8d4377476cfb 9951568 devel optional pve-headers-5.4.65-1-pve_5.4.65-1_amd64.deb
+ a52ff11c9d31ee0d51b4fde0603ea4b2 60338272 admin optional pve-kernel-5.4.65-1-pve_5.4.65-1_amd64.deb
+ 165ec8d4139be4e6edd8ca494002a440 984628 devel optional pve-kernel-libc-dev_5.4.65-1_amd64.deb
+ a18f807500456b9a991476e8c0ffc88d 11110 devel optional pve-kernel_5.4.65-1_amd64.buildinfo

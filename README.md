@@ -25,7 +25,7 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
     - `pci=assign-bussus`
 
-      May be useful to assign PCIe port numbers to SR-IOV NICs for some desktop motherboards.
+      May be useful to assign PCIe port numbers to SR-IOV NICs (and passthrough USB controller?) for some desktop motherboards.
 
     - `kvm.ignore_msrs=1`
 
@@ -33,12 +33,12 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
     - `nomodeset nofb video=xxx:off`
 
-      Another way to avoid Linux loading the graphics. In my configuration, IGD graphics is set to be default in BIOS so that there seems no need to set these flags.
+      Another way to avoid Linux loading the graphics. In my configuration, IGD graphics is set to be default in BIOS so that there seems no need to set these flags. It seems not compatiable with "-hypervisor" flag?
 
   - Minimal:
 
     ```bash
-    GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream"
+    GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream,multifunction pci=assign-busses"
     ```
 
   - With SR-IOV and safer graphics:
@@ -124,6 +124,7 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
   ```bash
   agent: 1  # enable qemu guest agent
+  # args: -cpu host,-hypervisor
   audio0: device=ich9-intel-hda,driver=spice  # just for Steam Link
   balloon: 0  # disable memory ballooning device
   bios: ovmf  # uefi

@@ -6,7 +6,7 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
 - CPU: Intel Core i5-9600K
 - Memory: 32 GiB DDR4
-- Graphics: Radeon RX 5700 XT
+- Graphics: (ASUS) Radeon RX 5700 XT (while the default GPU set in BIOS is **IGD**)
 - Motherboard: MSI Z390M GAMING EDGE AC (customized BIOS with SR-IOV support)
 - Proxmox: 6.2
 - Kernel: 5.4.65-1-pve
@@ -35,13 +35,13 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
       Another way to avoid Linux loading the graphics. In my configuration, IGD graphics is set to be default in BIOS so that there seems no need to set these flags. It seems not compatiable with "-hypervisor" flag?
 
-  - Minimal:
+  - Mine:
 
     ```bash
     GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream,multifunction pci=assign-busses"
     ```
 
-  - With SR-IOV and safer graphics:
+  - Full:
 
     ```bash
     GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream,multifunction pci=assign-busses nofb nomodeset video=efifb:off,vesafb:off kvm.ignore_msrs=1"
@@ -86,15 +86,15 @@ This repository records some of the processes I used to configure Proxmox VE, pa
   options igb max_vfs=7
   ```
 
-- `/etc/modprobe.d/kvm-intel.conf` (NOT recommended for Windows guests)
+- `/etc/modprobe.d/kvm-intel.conf` (nested virtualization)
 
-  Enabling the nested virtualization may lead Windows guests to freeze at boot.
+  NOT recommended for Windows guests. Enabling the nested virtualization may lead Windows guests to freeze at boot.
 
   ```bash
   options kvm-intel nested=Y
   ```
 
-- Update kernel and initramfs.
+- Update kernel and initramfs
 
   ```bash
   update-initramfs -u
@@ -110,7 +110,9 @@ This repository records some of the processes I used to configure Proxmox VE, pa
   qm set 1001 -scsi0 /dev/disk/by-id/nvme-WDS500G2X0C-00L350_184510803654
   ```
 
-  Note: Windows does not support virtio scsi bus natively. Load the disk driver from `virtio-win-0.x.iso/vioscsi/` within the Windows installer. It's **better** to also load virtio network at the same time if using a para-virtualized NIC, in `NetKVM/`.
+  Note: ~~Windows does not support virtio scsi bus natively. Load the disk driver from `virtio-win-0.x.iso/vioscsi/` within the Windows installer.~~ You should also load virtio network at the same time if using a para-virtualized NIC, which is in `NetKVM/`.
+
+  Edit: it is better **NOT** to use para-virtualized SCSI disk or install qemu guest agent (including any irrelavant virtio drivers) on Windows. I'm not sure about what the problem is, but it may cause Windows guest to fail to launch any programs on my machine. Use SATA for a workaround.
 
   Use `fdisk -l` to check all disks, then `ls -l /sys/block/nvme0n1` to check the device's PCIe port.
 
@@ -122,9 +124,11 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
 - `/etc/pve/qemu-server/1001.conf`
 
+  For reference only. You may use SATA bus instead of virtio SCSI for Windows guests to avoid some annoying problems.
+
   ```bash
   agent: 1  # enable qemu guest agent
-  # args: -cpu host,-hypervisor
+  args: -cpu host,-hypervisor  # if you want to hide the hypervisor
   audio0: device=ich9-intel-hda,driver=spice  # just for Steam Link
   balloon: 0  # disable memory ballooning device
   bios: ovmf  # uefi
@@ -160,17 +164,20 @@ Navi GPUs cannot be properly reset in current kernel. This bug may cause the VM 
 
 A kernel patch can be applied to (partially) solve this issue.
 
-### V1
+### Patches
+
+#### V1
 
 - Patch at https://forum.level1techs.com/t/navi-reset-kernel-patch/147547/46
 - VM will be no longer fail to start. However, in many cases, especially when guest reboots, is force-stopped or reset, the GPU will causes the boot process of the VM to be extremely slow, or freezes intermittently, or evens fail to finish (blue screen due to driver watchdog error).
 
-### V3
+#### V3
 
 - Patch at https://forum.level1techs.com/t/navi-reset-bug-kernel-patch-v2/163103/8
-- Works perfectly on graphics, but the audio seems to be broken.
+- Works perfectly on graphics, however the audio seems to be broken and the GPU will not be turned off any more after the VM shuts down.
 
-### How to patch
+### How-to
+Install the debian packages in this repo directly, or follow the following steps to build your own ones.
 
 - Prereqs
 
@@ -179,7 +186,7 @@ A kernel patch can be applied to (partially) solve this issue.
   apt install dh-make libtool sphinx-common dh-python
   apt install asciidoc-base bison flex libdw-dev libelf-dev libiberty-dev libnuma-dev libslang2-dev libssl-dev lz4 xmlto zlib1g-dev
   
-  # remove these packages if built and installed before
+  # remove these packages if has installed any older version before
   dpkg --remove pve-kernel-5.xx-pve
   dpkg --remove pve-headers-5.xx-pve
   ```

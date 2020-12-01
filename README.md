@@ -167,9 +167,25 @@ See https://pve.proxmox.com/wiki/Package_Repositories
 
 Navi GPUs cannot be properly reset in current kernel. This bug may cause the VM not to be started again unless we reboot the Proxmox host. Some workarounds are explicitly write reset to the device, or make host sleep and then wake it up, which are not kind of elegant.
 
-A kernel patch can be applied to (partially) solve this issue.
+~~A kernel patch can be applied to (partially) solve this issue.~~
+EDIT: No kernel patches needed now! See the following section.
 
-### Patches
+### Kernel Module
+
+- Module at https://github.com/gnif/vendor-reset
+
+#### How-to
+
+```bash
+apt install dkms  # Dynamic Kernel Module Support
+gh repo clone gnif/vendor-reset && cd vendor-reset
+make clean && make
+dkms status  # show installed modules
+# dkms remove vendor-reset/0.0.17 --all  # remove old version if needed
+dkms install .
+```
+
+### Kernel Patches (OUTDATED)
 
 #### V1
 
@@ -181,7 +197,7 @@ A kernel patch can be applied to (partially) solve this issue.
 - Patch at https://forum.level1techs.com/t/navi-reset-bug-kernel-patch-v2/163103/8
 - Works perfectly on graphics, however the audio seems to be broken and the GPU will not be turned off any more after the VM shuts down.
 
-### How-to
+#### How-to
 Install the debian packages in this repo directly, or follow the following steps to build your own ones.
 
 - Prereqs

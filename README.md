@@ -12,8 +12,13 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 - Kernel: 5.4.65-1-pve
 - Windows Guest: Windows 10 20H2
 
-
 ## Host Configuration
+
+### Repositories
+
+See https://pve.proxmox.com/wiki/Package_Repositories
+
+### Kernel Options
 
 - `/etc/default/grub`
 

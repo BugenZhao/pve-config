@@ -259,3 +259,31 @@ startup: up=20
 vmgenid: b496c70b-510d-430a-873a-465c03469941
 ```
 
+## NAT Bridge
+
+1. Enable packet forwarding in `/etc/sysctl.conf`
+2. Suppose internet accessed through interface `eth0`, edit `/etc/network/interfaces`
+    ```
+    auto lo
+    iface lo inet loopback
+
+    auto eth0
+    iface eth0 inet static
+    address YOUR-PUBLIC-STATIC-IP/YOUR-PUBLIC-MASK
+    gateway YOUR-STATIC-GATEWAY
+
+    auto vmbr1
+    iface vmbr1 inet static
+    address 10.10.10.1
+    netmask 255.255.255.0
+    bridge_ports none
+    bridge_stp off
+    bridge_fd 0
+
+    post-up iptables -t nat -A POSTROUTING -s '10.10.10.0/24' -o eth0 -j MASQUERADE
+    post-down iptables -t nat -D POSTROUTING -s '10.10.10.0/24' -o eth0 -j MASQUERADE
+    ```
+3. `ifup vmbr1`
+4. For VMs, manually set
+    - IP: `10.10.10.x/24`
+    - Gateway: `10.10.10.1`

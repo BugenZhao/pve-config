@@ -2,15 +2,23 @@
 
 This repository records some of the processes I used to configure Proxmox VE, particularly for GPU (PCIe) passthrough and NIC SR-IOV. Hope this will be helpful for you.
 
+### !! Updates
+
+I've recently upgrade my desktop to AMD Ryzen platform. Some configurations are changed, especially graphics due to lack of an integrated one. Check out [this revision](https://github.com/BugenZhao/pve-config/tree/93f4c4ef0f2933da1c0dd67536ece86f15d27fee) if you're on a Intel CPU with integrated graphics.
+
 ## Environment
 
-- CPU: Intel Core i5-9600K
-- Memory: 32 GiB DDR4
-- Graphics: (ASUS) Radeon RX 5700 XT (while the default GPU set in BIOS is **IGD**)
-- Motherboard: MSI Z390M GAMING EDGE AC (customized BIOS with SR-IOV support)
-- Proxmox: 6.2
-- Kernel: 5.4.65-1-pve
-- Windows Guest: Windows 10 20H2
+- CPU: AMD Ryzen 9 5900X 12-Core Processor
+- Memory: 48 GiB DDR4
+- Graphics:
+  - AMD Radeon RX 5700 XT
+  - NVIDIA Geforce GT 710
+- Motherboard: MSI B550M Mortar WiFi
+- Proxmox: 6.4
+- Kernel: 5.4.128-1-pve
+- Guest:
+  - Windows 10 21H1
+  - Ubuntu 20.10
 
 ## Host Configuration
 
@@ -18,13 +26,17 @@ This repository records some of the processes I used to configure Proxmox VE, pa
 
 See https://pve.proxmox.com/wiki/Package_Repositories
 
+### BIOS Options
+
+Just remember to turn on the CPU virtualization feature, and SR-IOV support if needed.
+
 ### Kernel Options
 
 - `/etc/default/grub`
 
   - Explanations:
 
-    - `pcie_acs_override` 
+    - `pcie_acs_override`
 
       Devices are divided into IOMMU groups, however a whole group of devices must be passthoughed at the same time to the VM. This option makes it possible to passthrough a single graphic card on some desktop motherboards. Note that it is the feature of a kernel patch, and Proxmox VE includes it.
 
@@ -34,13 +46,24 @@ See https://pve.proxmox.com/wiki/Package_Repositories
 
     - `kvm.ignore_msrs=1`
 
-      May be useful for Nvidia card on Windows guests? (v1804-v19xx)
+      May be useful for Nvidia card on Windows guests (v1804-v19xx)? This can also be set in `vfio` configuration file. Keep reading.
 
     - `nomodeset nofb video=xxx:off`
 
-      Another way to avoid Linux loading the graphics. In my configuration, IGD graphics is set to be default in BIOS so that there seems no need to set these flags. It seems not compatiable with "-hypervisor" flag?
+      Another way to avoid Linux loading the graphics. For instance, `video=xxx:off` will freeze the video after `initramfs` is loaded. It seems not compatiable with "-hypervisor" flag?
 
-  - Mine:
+      Assuming that you will boot the computer with HDMI/DP cable plugged on your main GPU...
+
+      - If your CPU has an IGD graphics and it is set to be default in BIOS, there seems no need to set these flags.
+      - Otherwise, once host kernel begins to output messages into the screen, some of resources of this GPU are allocated and it can NEVER be successfully passthroughed into a guest, with reporting `BAR 0: can't reserve [mem 0xe0000000-0xefffffff 64bit pref]`.<br>In this case, you are actually working under a single-GPU configuration. These options, especially `video=xxx:off`, are **required**. Also, if you don't want to lose the capability of managing the PVE host using Linux TTY, you need to add an extra GPU (better if from a different manufacture).
+
+  - Mine (under the R9-5900X configuration):
+
+    ```bash
+    GRUB_CMDLINE_LINUX="amd_iommu=on pcie_acs_override=downstream,multifunction iommu=pt kvm_amd.npt=1 kvm_amd.avic=1 video=efifb:off"
+    ```
+
+  - Mine (under the i5-9600K configuration):
 
     ```bash
     GRUB_CMDLINE_LINUX="intel_iommu=on pcie_acs_override=downstream,multifunction pci=assign-busses"
@@ -57,12 +80,13 @@ See https://pve.proxmox.com/wiki/Package_Repositories
   These vfio kernel modules will be loaded at boot for PCIe passthrough.
 
   ```bash
+  vendor-reset # required for Navi 10 cards, see the following sections
+
   vfio
   vfio_iommu_type1
   vfio_pci
   vfio_virqfd
   ```
-
 
 - `/etc/modprobe.d/blacklist.conf`
 
@@ -70,18 +94,21 @@ See https://pve.proxmox.com/wiki/Package_Repositories
   blacklist amdgpu
   blacklist snd_hda_intel
   blacklist radeon
+
+  blacklist iwlwifi # if you want to passthrough the Intel WiFi
   ```
 
-- `/etc/modprobe.d/kvm-vfio.conf`
+- `/etc/modprobe.d/vfio.conf` or `/etc/modprobe.d/kvm-vfio.conf`
 
-  Run `lspci -nn` to get the ids for GPU and the audio device. This will make kernel ignore these devices.
+  Run `lspci -nn` to get the ids for all devices you want to passthrough, like the GPU and its audio device. This will make kernel ignore these devices.
 
   ```bash
   options vfio_iommu_type1 allow_unsafe_interrupts=1
-  options vfio-pci ids=1002:731f,1002:ab38 disable_vga=1
+  options vfio-pci ids=1002:731f,1002:ab38,8086:2723 disable_vga=1
+  options kvm ignore_msrs=1
   ```
 
-  Note: there's no need to append the id if just to passthrough a device like USB controller and NVMe.
+  Note: there's no need to append the id if just to passthrough a device like USB controller and NVMe. (update: really?)
 
 - `/etc/modprobe.d/igb.conf` (SR-IOV NIC)
 
@@ -154,7 +181,7 @@ See https://pve.proxmox.com/wiki/Package_Repositories
   numa: 0
   onboot: 1
   ostype: win10
-  scsi0: /dev/disk/by-id/nvme-WDS500G2X0C-00L350_184510803654,size=488386584K,ssd=1  
+  scsi0: /dev/disk/by-id/nvme-WDS500G2X0C-00L350_184510803654,size=488386584K,ssd=1
   scsihw: virtio-scsi-pci  # para-virtualized
   smbios1: uuid=9bb9d862-3fd0-4246-bef1-5f6f14d3f564
   sockets: 1
@@ -185,6 +212,9 @@ dkms status  # show installed modules
 dkms install .
 ```
 
+<details>
+<summary>Kernel Patches (OUTDATED)</summary>
+
 ### Kernel Patches (OUTDATED)
 
 #### V1
@@ -198,6 +228,7 @@ dkms install .
 - Works perfectly on graphics, however the audio seems to be broken and the GPU will not be turned off any more after the VM shuts down.
 
 #### How-to
+
 Install the debian packages in this repo directly, or follow the following steps to build your own ones.
 
 - Prereqs
@@ -206,7 +237,7 @@ Install the debian packages in this repo directly, or follow the following steps
   apt install git-core lintain build-essential automake autoconf libtool
   apt install dh-make libtool sphinx-common dh-python
   apt install asciidoc-base bison flex libdw-dev libelf-dev libiberty-dev libnuma-dev libslang2-dev libssl-dev lz4 xmlto zlib1g-dev
-  
+
   # remove these packages if has installed any older version before
   dpkg --remove pve-kernel-5.xx-pve
   dpkg --remove pve-headers-5.xx-pve
@@ -227,12 +258,20 @@ Install the debian packages in this repo directly, or follow the following steps
   dpkg -i *.deb
   ```
 
+  </details>
+
+## USB, WiFi, Bluetooth...
+
+For some systems (like my i5-9600K configuration), one can directly passthrough the USB controller of the back-panel to get all these devices passthroughed. While for other systems, this will lead to host kernel panic and then not work. I choose to manually passthrough some USB ports and the PCIe device of the WiFi card. Note that bluetooth may be a separate USB device to passthrough.
+
 ## Tricks
 
-- To enable booting an already installed Windows from virtio SCSI disk, follow this:
+- **Ethernet** The driver of the on-board 2.5Gbps ethernet controller of MSI B550M Mortar, named r8125, is not built in the 5.4 kernel. One may load it manually to make it work.
+- **M.2 vs the 4th PCIe Slot** Some slots are conflicted on B550 boards! Check the confliction before trying to find out the hardware problem. On my system, a M.2 to PCIe adaptor is required to install the secondary M.2 SSD while placing a debugging-use GPU on the 4th PCIe slot.
+- **SCSI** To enable booting an already installed Windows from virtio SCSI disk, follow this:
   https://superuser.com/questions/1057959/windows-10-in-kvm-change-boot-disk-to-virtio/1200899#1200899
-- Add a CIFS storage for samba sharing, and remember to follow the directory structure.
-- To hide VM signatures, append `args: -cpu host,-hypervisor` to the configuration file.
+- **Image Storage** Add a CIFS storage for samba sharing, and remember to follow the directory structure.
+- **Hide Hypervisor** To hide VM signatures, append `args: -cpu host,-hypervisor` to the configuration file.
   Note: **NEVER** leave an empty cpu args like `args: -cpu host`, it may lead to failing to load the GPU driver.
 
 ## XPEnology
@@ -263,27 +302,29 @@ vmgenid: b496c70b-510d-430a-873a-465c03469941
 
 1. Enable packet forwarding in `/etc/sysctl.conf`
 2. Suppose internet accessed through interface `eth0`, edit `/etc/network/interfaces`
-    ```
-    auto lo
-    iface lo inet loopback
 
-    auto eth0
-    iface eth0 inet static
-    address YOUR-PUBLIC-STATIC-IP/YOUR-PUBLIC-MASK
-    gateway YOUR-STATIC-GATEWAY
+   ```
+   auto lo
+   iface lo inet loopback
 
-    auto vmbr1
-    iface vmbr1 inet static
-    address 10.10.10.1
-    netmask 255.255.255.0
-    bridge_ports none
-    bridge_stp off
-    bridge_fd 0
+   auto eth0
+   iface eth0 inet static
+   address YOUR-PUBLIC-STATIC-IP/YOUR-PUBLIC-MASK
+   gateway YOUR-STATIC-GATEWAY
 
-    post-up iptables -t nat -A POSTROUTING -s '10.10.10.0/24' -o eth0 -j MASQUERADE
-    post-down iptables -t nat -D POSTROUTING -s '10.10.10.0/24' -o eth0 -j MASQUERADE
-    ```
+   auto vmbr1
+   iface vmbr1 inet static
+   address 10.10.10.1
+   netmask 255.255.255.0
+   bridge_ports none
+   bridge_stp off
+   bridge_fd 0
+
+   post-up iptables -t nat -A POSTROUTING -s '10.10.10.0/24' -o eth0 -j MASQUERADE
+   post-down iptables -t nat -D POSTROUTING -s '10.10.10.0/24' -o eth0 -j MASQUERADE
+   ```
+
 3. `ifup vmbr1`
 4. For VMs, manually set
-    - IP: `10.10.10.x/24`
-    - Gateway: `10.10.10.1`
+   - IP: `10.10.10.x/24`
+   - Gateway: `10.10.10.1`
